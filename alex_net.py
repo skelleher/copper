@@ -13,6 +13,8 @@ class AlexNet( nn.Module ):
 
         self._logger = None
         
+        self._is_classifier = True
+        self._class_table  = ClassTable( num_classes )
         self._num_classes  = num_classes
         self._input_width  = input_width
         self._input_height = input_height
@@ -72,14 +74,10 @@ class AlexNet( nn.Module ):
             # Classifier
             # dropout?  PyTorch example AlexNet does not
             nn.Linear(4096, self._num_classes),
-
-            # how to append a softmax in the PyTorch way?  Do it functionally in the forward() pass?
-            # Linear + LogSoftMax + ClassNLLCriterion
-###            nn.LogSoftmax()
         )
     
-        self.fc = self.classifier[6]
-        print("self.classifier = ", self.classifier)
+        # Save handle to final layer, since we may replace it at runtime
+        self.fc = self.classifier[-1]
             
         # Initialize weights
         self.apply( Model._weights_init )
@@ -105,37 +103,36 @@ class AlexNet( nn.Module ):
 
         x = self.classifier(x)
 
-##        return nn.functional.log_softmax(x)
         return x
 
     
     # backward() function is auto-defined by the autograd package
     
-    def num_flat_features(self, x):
-        size = x.size()[1:] # all dims except the batch size
-        num_features = 1
-        for s in size:
-            num_features *= s
-        #print("num_flat_features = %d" % num_features)
-        return num_features 
+#    def num_flat_features(self, x):
+#        size = x.size()[1:] # all dims except the batch size
+#        num_features = 1
+#        for s in size:
+#            num_features *= s
+#        #print("num_flat_features = %d" % num_features)
+#        return num_features 
 
-    def log(self, msg):
-        if self.logger:
-            self.logger.debug(msg)
+#    def log(self, msg):
+#        if self.logger:
+#            self.logger.debug(msg)
             
 
     # Properties
     
-    def _get_logger( self ):
-        return self._logger
+#    def _get_logger( self ):
+#        return self._logger
     
-    def _set_logger( self, logger ):
-        self._logger = logger
+#    def _set_logger( self, logger ):
+#        self._logger = logger
 
 #    def _get_num_classes( self ):
 #        return self._num_classes
 
-    logger          = property( _get_logger,        _set_logger )
+#    logger          = property( _get_logger,        _set_logger )
 #    num_classes     = property( _get_num_classes,   None )
 
 

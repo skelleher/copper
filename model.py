@@ -54,7 +54,8 @@ class Model( object ):
 
         self._args                  = None
         self._model_name            = None
-        self._model                 = None # Model has an nn.Module as a component, rather than inheriting from it
+        self._model                 = None # Model has an nn.Module as a component, rather than inheriting from it - SO GROSS MUST FIX
+        self._is_classifier         = True 
         self._num_classes           = 0
         self._class_table           = None
         self._optimizer             = None
@@ -65,16 +66,10 @@ class Model( object ):
         self._gpus                  = None
         self._vis                   = None
 
+
     @staticmethod
-    def create( model_name, class_table = None, num_classes = 2 ):
-        num_classes = len( class_table ) if class_table else num_classes
-
-        #print( "Create instance of model %s, %d classes" % (model_name, num_classes) )
-
-        # Create class_table if none provided
-        if not class_table:
-            class_table = ClassTable( num_classes = num_classes )
-
+    # TODO: models often want values passed to their constructor; just return a factory method to caller?
+    def create( model_name ):
         # First check for a match against the built-in models provided by Torch:
         try:
             pretrained = False
@@ -89,33 +84,27 @@ class Model( object ):
         except KeyError as error:
             # Next check for a fully-qualified Python class that implements the model
             _class = locate( model_name )
-            _model = _class( num_classes )
+            _model = _class()
 
         model = Model()
-        model._model_name       = model_name
-        model._model            = _model
-        model._num_classes      = num_classes
-        model._class_table      = class_table
+        model._model_name = model_name
+        model._model      = _model
 
-        # Resize classifer layer if output != num_classes
-        # Assumes model's classifier layer is an attribute named "fc"!
         try:
-            fc = model._model.fc
-            if type(fc) is nn.Linear and fc.out_features != num_classes:
-                _model.fc = nn.Linear( fc.in_features, num_classes )
-                print( "Set output layer to %s" % str( _model.fc ) )
+            model._is_classifier = _model._is_classifier # SO GROSS MUST FIX
         except:
             pass
-            
+
         #print( model._model )
-        #print( model._class_table) 
 
         return model
 
 
-    def save( self, path ):
+    # Serialize the model to disk, optionally saving it with a new classname
+    # (this is useful if you have deleted or added any layers)
+    def save( self, path, classname = None ):
         dirname = os.path.dirname( path )
-        if not os.path.exists( dirname ):
+        if dirname and not os.path.exists( dirname ):
             os.makedirs( dirname )
 
         # Flatten DataParallel models so we can re-load them on a single GPU (or CPU)
@@ -126,13 +115,16 @@ class Model( object ):
         for key, value in model_state_dict.items():
             key = key.replace( "module.", "" )
             new_state_dict[ key ] = value
+
+        if classname:
+            print("Change model from class %s to %s" % (self._model_name, classname))
+
         model_state_dict = new_state_dict
 
- 
         checkpoint = {
             "signature"             : Model.MODEL_SIGNATURE,
             "version"               : Model.CHECKPOINT_VERSION,
-            "model"                 : self._model_name,
+            "model"                 : classname if classname else self._model_name,
             "model_state_dict"      : model_state_dict,
             "num_classes"           : self._num_classes,
             "class_table"           : self._class_table,
@@ -146,6 +138,8 @@ class Model( object ):
 
         #for key in enumerate( checkpoint[ "model_state_dict" ] ):
         #    print( key )
+
+        #print("*** saved %d layers" % (len(model_state_dict)))
 
         torch.save( checkpoint, path )
 
@@ -171,8 +165,6 @@ class Model( object ):
 
     @staticmethod
     def load_model( model_name ):
-#        model = Model.create( model_name, ClassTable.create( 1000 ) )
-#        return model, None, None
         # Check for a match against the built-in models provided by Torch:
         try:
             pretrained = False
@@ -208,26 +200,40 @@ class Model( object ):
             print( "Error: checkpoint version %d not supported" % checkpoint[ "version" ] )
             return None, None, None
         
-        #args.start_epoch = checkpoint[ "epoch" ]
-        #best_prec1 = checkpoint['best_prec1']
-        args = checkpoint[ "args" ]
+        # Create an empty model; we load the checkpoint into it
+        print( "Model: ", checkpoint[ "model" ] )
+        model = Model.create( checkpoint[ "model" ] )
 
-        #print( args )
-        #print( checkpoint[ "model" ] )
-        #print( checkpoint[ "class_table" ] )
+        args = checkpoint[ "args" ]
+        saved_state_dict = checkpoint[ "model_state_dict" ]
+
         try:
-            print( "\n" )
-            print( "python " + " ".join( checkpoint[ "cmdline" ] ))
-            print( "\n" )
+            print( "Model was created with: python " + " ".join( checkpoint[ "cmdline" ] ) + "\n")
         except KeyError as error:
             pass
 
-        # Load the model
-        model = Model.create( checkpoint[ "model" ], checkpoint[ "class_table" ] )
-        model_state_dict = checkpoint[ "model_state_dict" ]
-        model._model.load_state_dict( model_state_dict )
-        #print( "Loaded previous state into model" )
-   
+        # Load the class_table, if model is a classifier
+        try:
+            # Set class_table using the property, which properly resizes the output layer
+            model.class_table = checkpoint[ "class_table" ]
+            #model._num_classes = len(model._class_table)
+        except:
+            pass
+
+        # Load the state_dict.
+        saved_layers = len(saved_state_dict)
+        model_layers = len(model._model.state_dict())
+        if saved_layers < model_layers:
+            print("WARNING: checkpoint has fewer layers than model; this is OK if you are restoring a truncated model.")
+            print("Loading %d of %d layers\n" % (saved_layers, model_layers))
+            model._model.load_state_dict( saved_state_dict, strict = False )
+        elif saved_layers > model_layers:
+            print("ERROR: checkpoint has %d layers but model only expects %d layers" % (saved_layers, model_layers))
+            return model, None, None
+        else:
+            model._model.load_state_dict( saved_state_dict )
+
+
         # Load the data normalization
         try:
             self._normalization = checkpoint[ "normalization" ]
@@ -477,7 +483,7 @@ class Model( object ):
                 # Sanity check: print initial classificaiton loss
                 if self._epoch == 0 and batch_idx == 0 and self._num_classes > 0:  
                     # print first loss, should be -ln(1/num_classes)
-                    print('Epoch: {}, Batch: {}, Avg. Loss: {} (should be {})'.format(self._epoch, batch_idx, total_loss, -math.log(1/self._num_classes)))
+                    print('Epoch: {}, Batch: {}, Avg. Loss: {} (should be {} for {} classes)'.format(self._epoch, batch_idx, total_loss, -math.log(1/self._num_classes), self._num_classes))
                 batch_idx += 1;
 
 #        print( "batch %s ms" % perf.msecs ) # 1500 ms per batch on ImageNet; why so long?
@@ -540,7 +546,7 @@ class Model( object ):
                 #print( "labels = %s" % str(labels) )
                 #print( "predictions = %s" % str(predictions) )
 
-                total_loss += loss.item()
+                total_loss += float(loss.item())
                 total_acc  += accuracy
 
         mean_loss = total_loss / num_batches / num_crops
@@ -643,8 +649,29 @@ class Model( object ):
         return self._class_table
 
     def _set_class_table( self, class_table ):
-        self._class_table = class_table
+        if not self._is_classifier:
+            print( "ERROR: set_class_table not allowed; model is not a classifier" )
+            return
 
+        self._class_table = class_table
+        self._num_classes = len(class_table)
+
+        # Resize the output layer if output != num_classes
+        # Assumes model's classifier layer is an attribute named "fc"! # TODO: fix this gross hack
+        try:
+            output = self._model.fc
+            print("*** output layer = ", output)
+            if type(output) is nn.Linear and output.out_features != self._num_classes:
+                self._model.fc = nn.Linear( output.in_features, self._num_classes )
+                print( "Set output layer to %s" % str( self._model.fc ) )
+        except Exception as e:
+            print( "ERROR: set_class_table: ", e ) 
+            return 
+
+        print( "set_class_table: ", class_table )
+        #print( self._model )
+        
+ 
     def _get_class_names( self ):
         return self._class_table.names
 

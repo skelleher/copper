@@ -198,7 +198,11 @@ class ClassTable( object ):
         self._idx += 1
         
         return item
-        
+
+
+    def __str__( self ):
+        return str( self._class_table )
+
 
     #
     # Properties
