@@ -178,12 +178,8 @@ class ResnetCBIR( nn.Module ):
         self.avgpool = torch.nn.AvgPool2d( (7,7) ) # Bx7x7 features -> Bx7x7 avgpool == Bx1x1 output
         self.reshape = View( 2048 )
         
-        self.embedding = nn.Sequential(
-            nn.Linear(2048, self._embedding_length)
-        )
-
-        # Save handle to final layer, since we may replace it at runtime
-        self.fc = self.embedding[0]
+         # final layer must be named .fc, so that model.class_table = <foo> can find it and resize it
+         self.fc = nn.Linear(2048, self._embedding_length)
 
         print( "Size after embedding layer: ", self._embedding_length )
 
