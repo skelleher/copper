@@ -442,6 +442,7 @@ class Model( object ):
         self._optimizer = optimizer
 
         self._model.train()
+        torch.set_grad_enabled( True )
 
         num_batches = len( dataloader )
         batch_idx = 0
@@ -477,7 +478,7 @@ class Model( object ):
                 predictions = Model._get_predictions( output )
                 accuracy    = Model._get_accuracy( predictions, labels.cpu().numpy() )
         
-                total_loss += loss.item()
+                total_loss += float(loss.item())
                 total_acc  += accuracy
         
                 # Sanity check: print initial classificaiton loss
@@ -498,6 +499,7 @@ class Model( object ):
 
     def test( self, test_loader, criterion, crop_size = (224, 224) ):
         self._model.eval()
+        torch.set_grad_enabled( False )
 
         num_batches = len( test_loader )    
         total_loss  = 0
@@ -660,15 +662,15 @@ class Model( object ):
         # Assumes model's classifier layer is an attribute named "fc"! # TODO: fix this gross hack
         try:
             output = self._model.fc
-            print("*** output layer = ", output)
             if type(output) is nn.Linear and output.out_features != self._num_classes:
+                del self._model.fc
                 self._model.fc = nn.Linear( output.in_features, self._num_classes )
-                print( "Set output layer to %s" % str( self._model.fc ) )
+                print( "Set output layer: %s" % str( self._model.fc ) )
         except Exception as e:
             print( "ERROR: set_class_table: ", e ) 
             return 
 
-        print( "set_class_table: ", class_table )
+        print( "Set class_table: ", class_table )
         #print( self._model )
         
  
