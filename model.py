@@ -228,7 +228,7 @@ class Model( object ):
             print("Loading %d of %d layers\n" % (saved_layers, model_layers))
             model._model.load_state_dict( saved_state_dict, strict = False )
         elif saved_layers > model_layers:
-            print("ERROR: checkpoint has %d layers but model only expects %d layers" % (saved_layers, model_layers))
+            print("\n*** ERROR: checkpoint has %d layers but model only expects %d layers; code/data mis-match?\n" % (saved_layers, model_layers))
             return model, None, None
         else:
             model._model.load_state_dict( saved_state_dict )
@@ -248,11 +248,11 @@ class Model( object ):
             optimizer_name = None
 
         optimizer = None
-#        if optimizer_name == "SGD":
-#            optimizer = optim.SGD( model._model.parameters(), lr = args.lr, momentum = args.momentum, weight_decay = args.wd )
+        if optimizer_name == "SGD":
+            optimizer = optim.SGD( model._model.parameters(), lr = args.lr, weight_decay = args.wd, momentum = 0.9 )
 #            #optimizer = optim.SGD( model._model.parameters(), lr = 0.01 )
-#        elif optimizer_name == "Adam":
-#            optimizer = optim.Adam( model._model.parameters(), lr = args.lr, weight_decay = args.wd )
+        elif optimizer_name == "Adam":
+            optimizer = optim.Adam( model._model.parameters(), lr = args.lr, weight_decay = args.wd )
 #            #optimizer = optim.Adam( model._model.parameters(), lr = 0.01 )
    
         if optimizer:
@@ -561,6 +561,7 @@ class Model( object ):
     # details of crops size and normalization are properties of the model
     def classify( self, image_tensor ):
         self._model.eval()
+        torch.set_grad_enabled( False )
         
         # Normalize the data to match model's training parameters
         if self._normalization:
@@ -596,13 +597,13 @@ class Model( object ):
 #            print( "min/mean/max = ", output[ i ].min(), output[ i ].mean(), output[ i ].max() )
 
         # if output was not from logsoft max, we must apply it first:
-        model_output = nn.functional.log_softmax( output, dim=0 ) 
+        model_output = nn.functional.log_softmax( output, dim = 1 ) 
 #        print( "softmax = ", model_output )
 
         val, idx = torch.max( model_output, dim = 1 )
 
-#        print( val )
-#        print( idx )
+#        print( val.item() )
+#        print( idx.item() )
 
         #class_ids     = idx.data.cpu().view( -1 ).numpy()
         #probabilities = val.data.cpu().view( -1 ).numpy()
@@ -670,7 +671,7 @@ class Model( object ):
             print( "ERROR: set_class_table: ", e ) 
             return 
 
-        print( "Set class_table: ", class_table )
+        print( "Set class_table: ", len(class_table) )
         #print( self._model )
         
  
