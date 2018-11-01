@@ -9,10 +9,9 @@ from copper import utils
 # Inherit from nn.Module, not copper.Model, because latter was PITA with 
 # resolving methods like forward() and train()
 
-# Don't change capitalization of classname; old serialized models expect it
-class ResNet( nn.Module ):
+class Resnet50( nn.Module ):
     def __init__( self, num_classes = 2, input_width = 224, input_height = 224 ):
-        super( ResNet, self ).__init__()
+        super( Resnet50, self ).__init__()
 
         verbose = True 
         
@@ -119,9 +118,9 @@ class ResNet( nn.Module ):
 # This is a Resnet50 model that has the classifier layer removed, and replaced
 # with an embedding layer.  The output vectors are suitable for image search or captioning.
 
-class ResnetCBIR( nn.Module ):
+class Resnet50CBIR( nn.Module ):
     def __init__( self, embedding_length = 512, input_width = 224, input_height = 224 ):
-        super( ResnetCBIR, self ).__init__()
+        super( Resnet50CBIR, self ).__init__()
 
         verbose = True 
         
