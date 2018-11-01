@@ -224,7 +224,7 @@ class Model( object ):
         saved_layers = len(saved_state_dict)
         model_layers = len(model._model.state_dict())
         if saved_layers < model_layers:
-            print("WARNING: checkpoint has fewer layers than model; this is OK if you are restoring a truncated model.")
+            print("WARNING: checkpoint has fewer layers than model.")
             print("Loading %d of %d layers\n" % (saved_layers, model_layers))
             model._model.load_state_dict( saved_state_dict, strict = False )
         elif saved_layers > model_layers:

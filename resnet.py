@@ -68,10 +68,6 @@ class ResNet( nn.Module ):
         self.avgpool = torch.nn.AvgPool2d( (7,7) ) # Bx7x7 features -> Bx7x7 avgpool == Bx1x1 output
         self.reshape = View( 2048 )
         
-#        self.classifier = nn.Sequential(
-#            nn.Linear(2048, self._num_classes)
-#        )
-
         # final layer must be named .fc, so that model.class_table = <foo> can find it and resize it
         self.fc = nn.Linear(2048, self._num_classes)
 
@@ -111,7 +107,6 @@ class ResNet( nn.Module ):
 
         x = self.reshape(x)
 
-#        x = self.classifier(x)
         x = self.fc(x)
 
         return x
@@ -179,7 +174,7 @@ class ResnetCBIR( nn.Module ):
         self.reshape = View( 2048 )
         
         # final layer must be named .fc, so that model.class_table = <foo> can find it and resize it
-        self.fc = nn.Linear(2048, self._embedding_length)
+#        self.fc = nn.Linear(2048, self._embedding_length)
 
         print( "Size after embedding layer: ", self._embedding_length )
 
@@ -215,31 +210,11 @@ class ResnetCBIR( nn.Module ):
 
         x = self.reshape(x)
 
-        x = self.embedding(x)
+#        x = self.fc(x)
 
         return x
 
     
     # backward() function is auto-defined by the autograd package
-
-
-#    def log(self, msg):
-#        if self.logger:
-#            self.logger.debug(msg)
-            
-
-    # Properties
-    
-#    def _get_logger( self ):
-#        return self._logger
-    
-#    def _set_logger( self, logger ):
-#        self._logger = logger
-
-#    def _get_num_classes( self ):
-#        return self._num_classes
-
-#    logger          = property( _get_logger,        _set_logger )
-#    num_classes     = property( _get_num_classes,   None )
 
 
