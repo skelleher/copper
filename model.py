@@ -119,7 +119,7 @@ class Model( object ):
         for i, key in enumerate(model_state_dict.keys()):
             key = key.replace( "module.", "" )
             new_state_dict[ key ] = model_state_dict[ key ]
-            print("%d: %s" % (i, key))
+            #print("%d: %s" % (i, key))
 
         if classname:
             print("Change model from class %s to %s" % (self._model_name, classname))
@@ -243,7 +243,7 @@ class Model( object ):
             print("\n*** ERROR: checkpoint has %d layers but model only expects %d layers; class/data mis-match?\n" % (saved_layers, model_layers))
             return model, None, None
         else:
-            model._model.load_state_dict( saved_state_dict )
+            model._model.load_state_dict( saved_state_dict, strict = False )
 
 
         # Load the data normalization
