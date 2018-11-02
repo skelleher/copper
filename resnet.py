@@ -24,11 +24,8 @@ class Resnet50( nn.Module ):
         self._input_height = input_height
 
         self.features = nn.Sequential()
-#        self.features.zeroPad = torch.nn.ZeroPad2d(3)
 
         # Stage 1
-#        pad, _ = utils.same_padding((self._input_width, self._input_height), (7, 7), (2,2))
-
         self.features.conv1, w, h = Model._conv_layer(3, 64, 7, 2, 3, input_width, input_height, verbose)
         self.features.pool1, w, h = Model._pool_layer(3, 2, 1, w, h, verbose)
 

@@ -90,6 +90,10 @@ class Model( object ):
         model._model_name = model_name
         model._model      = _model
 
+        print("Model %s has %d layers" % (model_name, len(_model.state_dict())))
+#        for i, key in enumerate(_model.state_dict().keys()):
+#            print("%d: %s" % (i, key))
+
         try:
             model._is_classifier = _model._is_classifier # SO GROSS MUST FIX
         except:
@@ -112,9 +116,10 @@ class Model( object ):
         model_state_dict = self._model.state_dict()
         new_state_dict = OrderedDict()
 
-        for key, value in model_state_dict.items():
+        for i, key in enumerate(model_state_dict.keys()):
             key = key.replace( "module.", "" )
-            new_state_dict[ key ] = value
+            new_state_dict[ key ] = model_state_dict[ key ]
+            print("%d: %s" % (i, key))
 
         if classname:
             print("Change model from class %s to %s" % (self._model_name, classname))
@@ -124,6 +129,7 @@ class Model( object ):
         checkpoint = {
             "signature"             : Model.MODEL_SIGNATURE,
             "version"               : Model.CHECKPOINT_VERSION,
+            "torch_version"         : torch.version.__version__,
             "model"                 : classname if classname else self._model_name,
             "model_state_dict"      : model_state_dict,
             "num_classes"           : self._num_classes,
@@ -204,6 +210,12 @@ class Model( object ):
         print( "Model: ", checkpoint[ "model" ] )
         model = Model.create( checkpoint[ "model" ] )
 
+        try:
+            model_torch_version = checkpoint[ "torch_version" ]
+            print( "Torch version: %s, model version %s" % (torch.version.__version__, model_torch_version) )
+        except KeyError as error:
+            pass
+ 
         args = checkpoint[ "args" ]
         saved_state_dict = checkpoint[ "model_state_dict" ]
 
@@ -224,11 +236,11 @@ class Model( object ):
         saved_layers = len(saved_state_dict)
         model_layers = len(model._model.state_dict())
         if saved_layers < model_layers:
-            print("WARNING: checkpoint has fewer layers than model.")
+            print("\n *** WARNING: checkpoint has fewer layers than model: class/data mis-match?\n")
             print("Loading %d of %d layers\n" % (saved_layers, model_layers))
             model._model.load_state_dict( saved_state_dict, strict = False )
         elif saved_layers > model_layers:
-            print("\n*** ERROR: checkpoint has %d layers but model only expects %d layers; code/data mis-match?\n" % (saved_layers, model_layers))
+            print("\n*** ERROR: checkpoint has %d layers but model only expects %d layers; class/data mis-match?\n" % (saved_layers, model_layers))
             return model, None, None
         else:
             model._model.load_state_dict( saved_state_dict )
