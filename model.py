@@ -117,14 +117,13 @@ class Model( object ):
         new_state_dict = OrderedDict()
 
         for i, key in enumerate(model_state_dict.keys()):
-            key = key.replace( "module.", "" )
-            new_state_dict[ key ] = model_state_dict[ key ]
+            key2 = key.replace( "module.", "" )
+            new_state_dict[ key2 ] = model_state_dict[ key ]
             #print("%d: %s" % (i, key))
+        model_state_dict = new_state_dict
 
         if classname:
             print("Change model from class %s to %s" % (self._model_name, classname))
-
-        model_state_dict = new_state_dict
 
         checkpoint = {
             "signature"             : Model.MODEL_SIGNATURE,
@@ -217,6 +216,8 @@ class Model( object ):
             pass
  
         args = checkpoint[ "args" ]
+        print( "args = ", args )
+
         saved_state_dict = checkpoint[ "model_state_dict" ]
 
         try:
@@ -245,7 +246,6 @@ class Model( object ):
         else:
             model._model.load_state_dict( saved_state_dict, strict = False )
 
-
         # Load the data normalization
         try:
             self._normalization = checkpoint[ "normalization" ]
@@ -268,8 +268,10 @@ class Model( object ):
 #            #optimizer = optim.Adam( model._model.parameters(), lr = 0.01 )
    
         if optimizer:
-            print( "Loaded optimizer %s" % optimizer )
             optimizer.load_state_dict( checkpoint[ "optimizer_state_dict" ] )
+            #print( "Loaded optimizer %s" % optimizer )
+            #if torch.cuda.is_available() and self.gpus:
+            #    optimizer = optimizer.cuda()
 
         try:
             model._epoch = checkpoint[ "epoch" ]
@@ -313,7 +315,7 @@ class Model( object ):
         height = math.floor( ((height - kernel_size + 2*pad) / stride) + 1)
 
         if verbose:
-            print( "Size after C layer (stride %d) = %d x %d x %d" % (stride, output_filters, width, height) )
+            print( "Size after C layer (stride %d) = %d x %d x %d (%d)" % (stride, output_filters, width, height, output_filters*width*height) )
 
         layer.apply( Model._weights_init )
 
@@ -371,7 +373,7 @@ class Model( object ):
         if verbose:
             w = input_size[0]
             h = input_size[1]
-            print( "Size after residual identity %d x %d" % (w, h) )
+            print( "Size after residual identity %d x %d x %d (%d)" % (F3, w, h, F3*w*h) )
         
         # Caller must add X and block output, and apply final ReLU(), in the forward() function
         # see Model.residual_block_forward()
@@ -429,7 +431,7 @@ class Model( object ):
         h = math.floor( ((input_size[1] - kernel_size[1] + 2*pad) / stride[1]) + 1)
         
         if verbose:
-            print( "Size after residual convolution (stride %d) %d x %d" % (stride[0], w, h) )
+            print( "Size after residual convolution (stride %d) %d x %d x %d (%d)" % (stride[0], F3, w, h, F3*w*h) )
         
         return block, shortcut, w, h
 
