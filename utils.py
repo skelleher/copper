@@ -526,4 +526,60 @@ def same_padding(input_size, kernel_size, stride = (1,1)):
 
     return (padding_width, padding_height)
 
-    
+
+def strip_model( model, strip_class_table = False, num_layers_to_strip = 0, verbose = False):
+    modified = False
+
+    if strip_class_table:
+        print("Stripped class table")
+        model._class_table = None
+        model._num_classes = None
+        modified = True
+
+    if num_layers_to_strip > 0:
+        num_layers_to_show = num_layers_to_strip + 1
+
+        if verbose:
+            print_last_n_layers( model, num_layers_to_show)
+ 
+        print("Removed %d layers" % num_layers_to_strip)
+        removed = list(model._model.children())[ : -num_layers_to_strip ]
+        # PROBLEM: this doesn't keep ANY of the layer names from the model,
+        # so if we save it we can't load it again (mis-matched state_dict)
+        # TODO: rewrite the state_dict keys
+        old_state_dict = model._model.state_dict()
+        model._model = torch.nn.Sequential(*removed)
+        new_state_dict = model._model.state_dict()
+
+        # Rename the state_dict keys before saving, so they match the model.
+        # Otherwise, we won't be able to reload them in the future.
+        # Relies on fact that state_dict is an OrderedDict
+        # We can't modify an OrderedDict while iterating, so we have to make a full copy in RAM first.
+#        for key, key2 in list(zip( old_state_dict.keys(), new_state_dict.keys() )):
+#            print("%s -> %s" % (key2, key))
+#            del new_state_dict[ key2 ]
+#            new_state_dict[ key ] = old_state_dict[ key ]
+#        model._model.load_state_dict( new_state_dict )
+        modified = True
+
+    return modified
+
+
+def print_last_n_layers( model, n ):
+    print("\nLast %d layers:" % (n))
+    layers = list(model._model.children())[ -n: ]
+
+    for layer in layers:
+        print(" * ", layer)
+
+
+def rename_key(iterable, oldkey, newKey):
+    if type(iterable) is dict:
+        for key in iterable.keys():
+            if key == oldkey:
+                iterable[newKey] = iterable.pop(key)
+
+    return iterable
+
+
+   
