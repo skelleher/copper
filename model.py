@@ -489,8 +489,8 @@ class Model( object ):
                 loss.backward()
                 optimizer.step()
     
-                predictions = Model._get_predictions( output )
-                accuracy    = Model._get_accuracy( predictions, labels.cpu().numpy() )
+                predictions, _ = Model.get_predictions( output )
+                accuracy       = Model._get_accuracy( predictions, labels.cpu().numpy() )
         
                 total_loss += float(loss.item())
                 total_acc  += accuracy
@@ -554,8 +554,8 @@ class Model( object ):
                 output      = self._model.forward( cropped_batch )
                 loss        = criterion( output, labels )   # returns average loss for the minibatch
 
-                predictions = Model._get_predictions( output )
-                accuracy    = Model._get_accuracy( predictions, labels.cpu().numpy() )
+                predictions, _ = Model.get_predictions( output )
+                accuracy       = Model._get_accuracy( predictions, labels.cpu().numpy() )
 
                 #print( "batch = %s labels = %s" % (str(cropped_batch.size()), str(labels.size())))
                 #print( "test loss: %f test acc: %f" % (loss, accuracy) )             
@@ -590,7 +590,7 @@ class Model( object ):
             image_tensor = image_tensor.cuda()
 
         output = self._model.forward( image_tensor )
-        predictions, probabilities = Model._get_predictions( output )
+        predictions, probabilities = Model.get_predictions( output )
         #print( "p = %s" % str(predictions) )
     
         labels = []
@@ -601,32 +601,24 @@ class Model( object ):
 
 
     @staticmethod
-    def _get_predictions( model_output ):
+    # TODO: this only returns a single prediction for each item in the batch
+    # Might like to return top-N predictions
+    def get_predictions( model_output ):
         output = model_output.data
 
-#        print( "_get_predictions: ", output.size() ) 
-#        print( output )
-        
-#        for i in range( len( output ) ):
-#            print( "min/mean/max = ", output[ i ].min(), output[ i ].mean(), output[ i ].max() )
-
-        # if output was not from logsoft max, we must apply it first:
+        # Assumes output is from a linear layer, trained on CrossEntropyLoss, so we still need to apply log_softmax:
         model_output = nn.functional.log_softmax( output, dim = 1 ) 
-#        print( "softmax = ", model_output )
 
+        # Find the label with maximum probability (for each item in the batch)
         val, idx = torch.max( model_output, dim = 1 )
 
-#        print( val.item() )
-#        print( idx.item() )
-
-        #class_ids     = idx.data.cpu().view( -1 ).numpy()
-        #probabilities = val.data.cpu().view( -1 ).numpy()
         class_ids     = idx.cpu().view( -1 ).numpy()
         probabilities = val.cpu().view( -1 ).numpy()
         
         # convert from negative log probability to probability
         probabilities = [ math.exp( p ) for p in probabilities ]
-        #print( probabilities )
+        #print( "class IDs = ", class_ids )
+        #print( "probabilities = ", probabilities )
         
         return class_ids, probabilities
 
