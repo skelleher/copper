@@ -159,12 +159,6 @@ class Model( object ):
         if not model:
             model, criterion, args = Model.load_checkpoint( path_or_model_name )
 
-        # Save the input width/height that this model expects
-#        if args:
-#            print( "args = ", args )
-#            self._input_width  = args.w
-#            self._input_height = args.h
-
         return model, criterion, args
 
 
@@ -262,10 +256,8 @@ class Model( object ):
         optimizer = None
         if optimizer_name == "SGD":
             optimizer = optim.SGD( model._model.parameters(), lr = args.lr, weight_decay = args.wd, momentum = 0.9 )
-#            #optimizer = optim.SGD( model._model.parameters(), lr = 0.01 )
         elif optimizer_name == "Adam":
             optimizer = optim.Adam( model._model.parameters(), lr = args.lr, weight_decay = args.wd )
-#            #optimizer = optim.Adam( model._model.parameters(), lr = 0.01 )
    
         if optimizer:
             optimizer.load_state_dict( checkpoint[ "optimizer_state_dict" ] )
@@ -425,8 +417,6 @@ class Model( object ):
 
         # Caller must add X and block output, and apply final ReLU(), in the forward() function
 
-        #w = input_size[0] / stride[0]
-        #h = input_size[1] / stride[1]
         w = math.floor( ((input_size[0] - kernel_size[0] + 2*pad) / stride[0]) + 1)
         h = math.floor( ((input_size[1] - kernel_size[1] + 2*pad) / stride[1]) + 1)
         

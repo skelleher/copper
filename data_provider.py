@@ -20,15 +20,6 @@ def _init_pool_worker():
 
 pool = Pool( processes = 4, initializer = _init_pool_worker ) 
 
-#Sample_v1 = namedtuple( "Sample", "classid, classname, path" )  
-#Sample    = namedtuple( "Sample", "path, num_objects, objects" )  
-#Object    = namedtuple( "Object", "classid, classname, rect" )
-
-
-# Class methods because we want to dispatch them to multiple processes.
-# Pickling/de-pickling an entire DataProvider per proc/call is very slow.
-#_load_function = None
-#_augment_function = None
 
 # Extending Dataset allows us to work in concert with torch.utils.data.DataLoader,
 # which is convenient
@@ -143,16 +134,11 @@ class DataProvider( torch.utils.data.Dataset ):
         bpp    = crop_size[ 0 ]
         width  = crop_size[ 1 ]
         height = crop_size[ 2 ] 
-        #top    = 0
-        #left   = 0
-        #bottom = height
-        #right  = width
 
         if not image:
             raise IOError( "_no_augment_no_crop: image is null" )
 
         img = image.resize( (width, height), resample = Image.BILINEAR )
-        #img = img.crop( (left, top, right, bottom) )
         #print( "_no_augment_no_crop %d x %d -> %d x %d" % (image.width, image.height, img.width, img.height) )
         img = transforms.ToTensor()( img )
 
@@ -183,10 +169,6 @@ class DataProvider( torch.utils.data.Dataset ):
                 mean = self._normalization.mean,
                 std  = self._normalization.std )( crop )
 
-
-#        if torch.cuda.is_available():
-#            crop = crop.cuda( async = True )
-            
         return crop
 
     # If a sample fails to load (e.g. malformed PNG or JPEG) we need to return

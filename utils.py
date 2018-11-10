@@ -39,11 +39,7 @@ def tensor_from_image(img):
 def image_from_tensor( tensor, bpp=None, width=None, height=None ):
     tensor_np = tensor.numpy()
 
-#    tensor_np = np.uint8( tensor_np * 255 )
-    
-    # PIL requires images in HxWxC order
-#    tensor_np = np.transpose( tensor_np, (1,2,0) )
-    
+    # PIL requires images in HxWxC order, so transpose()
     if ( 3 == tensor.dim() ):
         bpp    = tensor.size()[0]
         height = tensor.size()[1]
@@ -51,14 +47,11 @@ def image_from_tensor( tensor, bpp=None, width=None, height=None ):
 
         # PIL requires images in HxWxC order
         tensor_np = np.transpose( tensor_np, (1,2,0) )
-        #print("3D: %d x %d x %d" % (width, height, bpp))
         
     elif ( 2 == tensor.dim() ):
         bpp    = 1
         height = tensor.size()[0]
         width  = tensor.size()[1]
-
-        #print("2D: %d x %d" % (width, height))
         
     elif ( 1 == tensor.dim() ):
         # If flat and CxWxH not specified, assume a square image and hope for the best
@@ -106,8 +99,6 @@ def images_from_tensors(tensors, bpp, width, height):
     images = []
 
     for tensor in tensors:
-        #tensor_np = tensor.numpy()
-        ###img = Image.fromarray( tensor_np, 'F' )
         img = image_from_tensor( tensor, bpp, width, height )
         images.append( img )
 
@@ -172,10 +163,6 @@ def image_grid_show(images, cols=None, rows=None, width=512, height=512, labels=
 
 
 def tensor_grid_show(tensors, cols=None, rows=None, bpp=3, width=512, height=512, labels=None):
-    #if len(tensors) < rows * cols:
-    #    print( "Error: tensor_grid_show: %d tensors < %d x %d" % (len(tensors), cols, rows) )
-    #    return;
-
     if type(tensors) is list:
         tensors = torch.stack(tensors)
 
@@ -365,8 +352,6 @@ def grid_size( integer ):
     return max(pair), min(pair)
 
 
-#def image_scale( img, scale ):
-
 class IMAGE_REGION( Enum ):
     CENTER = 1
     NW     = 2
@@ -492,11 +477,6 @@ def image_crop( image, width, height, region = IMAGE_REGION.CENTER ):
 
 
 def convolution_output_shape(input_size, kernel_size, stride = (1,1), padding = (0,0)):
-#    print("input_size = %d, %d" % (input_size[0], input_size[1]))
-#    print("kernel_size = %d, %d" % (kernel_size[0], kernel_size[1]))
-#    print("stride = %d, %d" % (stride[0], stride[1]))
-#    print("padding = %d, %d" % (padding[0], padding[1]))
-    
     width  = np.floor( (input_size[0] - kernel_size[0] + (2 * padding[0])) / stride[0] ) + 1
     height = np.floor( (input_size[1] - kernel_size[1] + (2 * padding[1])) / stride[1] ) + 1    
     

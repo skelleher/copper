@@ -1,7 +1,6 @@
 import os
 import sys
 import csv
-#from collections import namedtuple
 from stat import *
 from base64 import *
 
@@ -158,7 +157,6 @@ class Index(object):
         directory = os.path.dirname( path )
         filename = os.path.basename( path )
         path_table_path = directory + os.path.sep + filename + ".classes"
-        #print( "*** path_table_path = %s" % path_table_path )
         return path_table_path
 
 
@@ -333,8 +331,6 @@ class Index(object):
         if create_classtable:
             self._class_table = ClassTable.create( self._class_table_path )
 
-        #print( self._class_table )
-
         # Check if PathTable exists.
         root = os.path.dirname( self._index_path )
         filename = os.path.basename( self._index_path )
@@ -363,7 +359,6 @@ class Index(object):
             index.write( "%d\n" % Index.INDEX_SIGNATURE )
             index.write( "class_table=%s\n" % os.path.basename( self._class_table_path ) )
             index.write( "path_table=%s\n" % os.path.basename( self._path_table_path ) )
-#            index.write( "class_id,filename\n" )
             index.write( "sample_json\n" )
 
             files = sorted( os.listdir( path ) )     

@@ -42,7 +42,6 @@ class PathTable( object ):
 
     def _load( self, path ):
         self._path_table_path = path
-        #print( "PathTable %s" % self._path_table_path )
 
         if not os.path.exists( path ) or not os.path.isfile( path ):
             print( "Error: %s not found" % path )
